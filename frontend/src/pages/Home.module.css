@@ -1,0 +1,223 @@
+.home-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 0 48px 0; /* 调整了上下padding，左右padding设为0，因为内容区会通过max-width控制 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px; /* 增加了元素间距 */
+  background: #fff;
+  border-radius: 24px; /* 更大的圆角 */
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.06); /* 更柔和的阴影 */
+  padding: 24px 40px; /* 增加了内边距 */
+  margin-bottom: 48px; /* 增加了与下方元素的间距 */
+  width: 100%;
+  max-width: 720px; /* 搜索栏最大宽度 */
+}
+
+.search-bar input[type="text"] {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1.25rem; /* 稍大字体 */
+  background: transparent;
+  color: #222;
+  padding: 12px 0; /* 增加了输入框的垂直padding */
+}
+
+.search-bar button {
+  background: linear-gradient(90deg, #007aff 0%, #00c6fb 100%);
+  color: #fff;
+  border: none;
+  border-radius: 16px; /* 更大的圆角 */
+  padding: 14px 36px; /* 增加了按钮padding */
+  font-size: 1.1rem; /* 稍大字体 */
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px 0 rgba(0,122,255,0.10); /* 按钮阴影 */
+}
+
+.search-bar button:disabled {
+  background: #e0e0e0;
+  color: #b0b0b0;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.news-list {
+  width: 100%;
+  max-width: 900px; /* 新闻列表最大宽度，比搜索栏稍宽 */
+  margin-bottom: 40px;
+  min-height: 180px; /* 最小高度，避免内容过少时塌陷 */
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* 新闻卡片之间的间距 */
+  /* 可以在这里添加新闻卡片的样式，或者为新闻卡片组件单独创建样式文件 */
+}
+
+/* 针对 news-list 中暂无新闻的提示文本样式 */
+.news-list > div {
+  color: #6c757d; /* 柔和的提示文字颜色 */
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 新闻卡片样式 */
+.news-card {
+  background: #fff;
+  border-radius: 12px; /* 较小的圆角 */
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05); /* 更轻柔的阴影 */
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 卡片内部元素间距 */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.news-card:hover {
+  transform: translateY(-4px); /* 鼠标悬停时轻微上移 */
+  box-shadow: 0 6px 20px 0 rgba(0,0,0,0.08); /* 鼠标悬停时阴影加深 */
+}
+
+.news-title {
+  margin: 0;
+  font-size: 1.3rem; /* 标题字体大小 */
+  font-weight: 600;
+  color: #1d1d1f; /* 深色标题 */
+  line-height: 1.4;
+}
+
+.news-desc {
+  margin: 0;
+  font-size: 1rem; /* 描述字体大小 */
+  color: #555; /* 稍浅的描述文字 */
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 限制描述显示3行 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.news-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #007aff; /* 链接颜色 */
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease-in-out;
+}
+
+.news-link:hover {
+  color: #005ecf; /* 链接悬停颜色 */
+  text-decoration: underline;
+}
+
+/* 错误消息样式 */
+.error-message {
+  color: #dc3545; /* 红色错误提示 */
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 40px 0;
+}
+
+
+.analyze-btn {
+  margin-bottom: 32px;
+}
+
+.analyze-btn button {
+  background: linear-gradient(90deg, #34e89e 0%, #0f3443 100%); /* 保持了之前的渐变色 */
+  color: #fff;
+  border: none;
+  border-radius: 16px; /* 更大的圆角 */
+  padding: 16px 48px; /* 增加了按钮padding */
+  font-size: 1.2rem; /* 稍大字体 */
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px 0 rgba(52,232,158,0.10); /* 按钮阴影 */
+}
+
+.analyze-btn button:disabled {
+  background: #e0e0e0;
+  color: #b0b0b0;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.report-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25); /* 稍微加深了遮罩层 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px; /* 给模态框内容区域一些呼吸空间，防止贴边 */
+}
+
+.report-modal > div { /* 这是模态框的内容区域 */
+  background: #fff;
+  border-radius: 24px; /* 更大的圆角 */
+  box-shadow: 0 12px 48px 0 rgba(0,0,0,0.12); /* 更精致的阴影 */
+  padding: 40px 48px 36px 48px; /* 增加了内边距 */
+  min-width: 420px; /* 模态框最小宽度 */
+  width: auto; /* 宽度自适应内容，但受max-width限制 */
+  max-width: 60vw; /* 模态框最大宽度，不超过视口宽度的60% */
+  max-height: 85vh; /* 模态框最大高度 */
+  overflow-y: auto; /* 内容超出时显示滚动条 */
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-modal h3 {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 1.6rem; /* 标题字体加大 */
+  font-weight: 600;
+  color: #1d1d1f; /* 苹果常用的深灰色文字 */
+  letter-spacing: 0.01em;
+  text-align: center; /* 标题居中 */
+}
+
+.report-modal pre {
+  background: #f5f5f7; /* 苹果风格的浅灰色背景 */
+  border: 1px solid #e5e5e5; /* 细边框 */
+  border-radius: 14px; /* 圆角 */
+  padding: 24px;
+  font-size: 1rem; /* 调整代码/文本区域字体大小 */
+  color: #333;
+  overflow-x: auto;
+  margin-bottom: 24px;
+  line-height: 1.6; /* 增加行高，提升可读性 */
+  flex-grow: 1; /* 让pre区域在内容不足时也能撑开 */
+}
+
+.report-modal button { /* 关闭按钮 */
+  background: #007aff; /* 苹果蓝 */
+  color: #fff;
+  border: none;
+  border-radius: 12px; /* 圆角 */
+  padding: 12px 32px;
+  font-size: 1.05rem; /* 字体大小 */
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: center; /* 按钮居中 */
+  margin-top: 16px; /* 与上方内容间距 */
+}
+
+.report-modal button:hover {
+  background: #005ecf; /* 鼠标悬停颜色加深 */
+}
