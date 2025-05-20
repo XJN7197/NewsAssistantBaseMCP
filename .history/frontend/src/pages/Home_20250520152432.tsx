@@ -87,7 +87,6 @@ const Home: React.FC = () => {
       const data = await response.json();
       // 检查返回的数据结构，确保有 report 字段
       if (data && data.report) {
-        console.log("获取到的分析报告:", data.report);
         setReport(data.report);
       } else {
         setReport("未获取到分析报告或报告格式不正确");
