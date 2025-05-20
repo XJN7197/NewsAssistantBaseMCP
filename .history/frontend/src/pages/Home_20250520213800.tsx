@@ -21,7 +21,18 @@ const Home: React.FC = () => {
   // 控制报告弹窗显示
   const [showReport, setShowReport] = useState(false)
 
-  // 处理复选框变化的函数已移至渲染部分的onItemChange
+  // 处理复选框变化
+  const handleCheckboxChange = useCallback((id: number) => {
+    setSelectedNews(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+      } else {
+        newSelected.add(id);
+      }
+      return newSelected;
+    });
+  }, [setSelectedNews]);
 
   // 搜索新闻
   const handleSearch = async () => {
@@ -166,7 +177,8 @@ const Home: React.FC = () => {
               </a>
             </div>
           );
-        }))}
+        })}
+        )}
       </div>
 
 

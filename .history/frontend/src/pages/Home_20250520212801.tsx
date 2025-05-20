@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import styles from './Home.module.css'
 
 // 假设你有这些组件，后续可单独实现
@@ -20,8 +20,6 @@ const Home: React.FC = () => {
   const [report, setReport] = useState<string | null>(null)
   // 控制报告弹窗显示
   const [showReport, setShowReport] = useState(false)
-
-  // 处理复选框变化的函数已移至渲染部分的onItemChange
 
   // 搜索新闻
   const handleSearch = async () => {
@@ -166,7 +164,8 @@ const Home: React.FC = () => {
               </a>
             </div>
           );
-        }))}
+        })}
+        )}
       </div>
 
 

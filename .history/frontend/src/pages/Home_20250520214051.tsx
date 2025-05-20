@@ -166,7 +166,8 @@ const Home: React.FC = () => {
               </a>
             </div>
           );
-        }))}
+        })}
+        )}
       </div>
 
 

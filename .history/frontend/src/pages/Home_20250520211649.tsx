@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import styles from './Home.module.css'
 
 // 假设你有这些组件，后续可单独实现
@@ -20,8 +20,6 @@ const Home: React.FC = () => {
   const [report, setReport] = useState<string | null>(null)
   // 控制报告弹窗显示
   const [showReport, setShowReport] = useState(false)
-
-  // 处理复选框变化的函数已移至渲染部分的onItemChange
 
   // 搜索新闻
   const handleSearch = async () => {
@@ -114,8 +112,6 @@ const Home: React.FC = () => {
     }
   }
 
-
-
   return (
     <div className={styles['home-container']}>
       {/* 搜索栏 */}
@@ -140,24 +136,12 @@ const Home: React.FC = () => {
         {newsList.length > 0 && newsList[0].error ? (
           <div className={styles['error-message']}>{newsList[0].error}</div>
         ) : (
-          newsList.map((news) => {
-            const onItemChange = () => {
-              setSelectedNews(prevSelected => {
-                const newSelected = new Set(prevSelected);
-                if (newSelected.has(news.id)) {
-                  newSelected.delete(news.id);
-                } else {
-                  newSelected.add(news.id);
-                }
-                return newSelected;
-              });
-            };
-            return (
-            <div key={news.id} className={styles['news-card']}>
+          newsList.map((news, index) => (
+            <div key={index} className={styles['news-card']}>
               <input
                 type="checkbox"
                 checked={selectedNews.has(news.id)}
-                onChange={onItemChange}
+                onChange={() => handleCheckboxChange(news.id)}
               />
               <h4 className={styles['news-title']}>{news.title}</h4>
               <p className={styles['news-desc']}>{news.desc}</p>
@@ -165,11 +149,14 @@ const Home: React.FC = () => {
                 阅读原文
               </a>
             </div>
-          );
-        }))}
+          ))
+        )}
       </div>
 
-
+      {/* 一键分析按钮 */}
+      <div className={styles['analyze-btn']}>
+        <button onClick={handleAnalyze} disabled={loading || selectedNews.size === 0}>
+      </div>
 
       {/* 一键分析按钮 */}
       <div className={styles['analyze-btn']}>
@@ -194,3 +181,16 @@ const Home: React.FC = () => {
 }
 
 export default Home
+
+// 处理复选框变化
+const handleCheckboxChange = (id: number) => {
+  setSelectedNews(prevSelected => {
+    const newSelected = new Set(prevSelected);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    return newSelected;
+  });
+};
