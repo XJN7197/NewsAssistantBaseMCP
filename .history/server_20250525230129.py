@@ -12,8 +12,6 @@ from openai import OpenAI
 from fastapi import FastAPI, Request # 导入 FastAPI 和 Request
 from fastapi.middleware.cors import CORSMiddleware # 导入 CORS 中间件
 from pydantic import BaseModel # 导入 BaseModel 用于请求体定义
-from typing import Optional # 导入 Optional 用于可选参数
-from fastapi.responses import JSONResponse
 
 # 加载环境变量
 load_dotenv()
@@ -502,67 +500,32 @@ async def send_email_endpoint(request_body: EmailRequest):
         return {"status": "error", "message": f"邮件发送失败: {str(e)}"}
 
 # 定义获取历史报告列表的接口
-@app.get("/reports")
-async def get_reports(keyword: Optional[str] = None):
-    """Get a list of historical reports, optionally filtered by keyword."""
-    output_dir = "sentiment_reports"
-    reports_list = []
-    if not os.path.exists(output_dir):
-        return JSONResponse(content={"reports": []})
+@app.route('/reports', methods=['GET'])
+def get_reports():
+    keyword = request.args.get('keyword', '')
+    reports = []
+    for report in os.listdir('sentiment_reports'):
+        if keyword.lower() in report.lower():
+            reports.append(report)
+    return jsonify({'reports': reports})
 
-    for filename in os.listdir(output_dir):
-        if filename.endswith(".md"):
-            file_path = os.path.join(output_dir, filename)
-            created_at = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
-            # For simplicity, let's read the first few lines as summary
-            summary = ""
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    # Read up to 5 lines or 200 characters for summary
-                    lines = [f.readline() for _ in range(5)]
-                    summary = "".join(lines).strip()
-                    if len(summary) > 200:
-                        summary = summary[:200] + "..."
-            except Exception as e:
-                print(f"Error reading summary from {filename}: {e}")
-                summary = "无法读取摘要"
-
-            report_info = {
-                "filename": filename,
-                "created_at": created_at,
-                "summary": summary
-            }
-            reports_list.append(report_info)
-
-    # Sort reports by creation date, newest first
-    reports_list.sort(key=lambda x: datetime.strptime(x['created_at'], '%Y-%m-%d %H:%M:%S'), reverse=True)
-
-    # Filter by keyword if provided
-    if keyword:
-        keyword_lower = keyword.lower()
-        reports_list = [report for report in reports_list if keyword_lower in report['filename'].lower() or keyword_lower in report['summary'].lower()]
-
-    return JSONResponse(content={"reports": reports_list})
-
-
-@app.get("/reports/{filename:path}")
-async def get_report_content(filename: str):
-    """Get the content of a specific report."""
-    output_dir = "sentiment_reports"
-    file_path = os.path.join(output_dir, filename)
-    if not os.path.exists(file_path):
-        return JSONResponse(content={"message": "Report not found"}, status_code=404)
-
+# 定义获取单个报告内容的接口
+@app.get("/reports/{filename}")
+async def get_report_content_endpoint(filename: str):
+    """获取单个报告的内容"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        file_path = os.path.join("./sentiment_reports", filename)
+        if not os.path.exists(file_path):
+            return {"status": "error", "message": "报告不存在"}
+        
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        return JSONResponse(content={
-            "filename": filename,
-            "content": content
-        })
+        
+        return {"content": content, "filename": filename}
     except Exception as e:
-        print(f"Error reading report file {filename}: {e}")
-        return JSONResponse(content={"message": "Error reading report file"}, status_code=500)
+        return {"status": "error", "message": f"获取报告内容失败: {str(e)}"}
+
+
 
 # 在 ConfigUpdateRequest 类后面添加新的请求体模型
 class SaveReportRequest(BaseModel):

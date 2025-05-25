@@ -46,8 +46,7 @@ const Home: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [historyReports, setHistoryReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any>(null);
-  // 新增状态：历史报告搜索关键词
-  const [historySearchKeyword, setHistorySearchKeyword] = useState('');
++  const [historySearchKeyword, setHistorySearchKeyword] = useState(''); // State for history report search keyword
 
   // 下载报告处理函数
   const handleDownload = useCallback(async () => {
@@ -281,13 +280,11 @@ const Home: React.FC = () => {
     // fetchConfig(); // 移动到 SettingsModal 的 useEffect 中
   };
 
-  // 添加获取历史报告列表函数，支持搜索关键词
-  const fetchHistoryReports = useCallback(async (keyword?: string) => {
+  // 添加获取历史报告列表函数
+  const fetchHistoryReports = useCallback(async () => {
     setLoading(true);
     try {
-      // 构建请求URL，如果keyword存在则添加到查询参数
-      const url = keyword ? `http://localhost:8000/reports?keyword=${encodeURIComponent(keyword)}` : 'http://localhost:8000/reports';
-      const response = await fetch(url);
+      const response = await fetch('http://localhost:8000/reports');
       const data = await response.json();
       if (data.reports) {
         setHistoryReports(data.reports);
@@ -421,20 +418,8 @@ const Home: React.FC = () => {
           </AntButton>
         ]}
         width="60vw"
-        styles={{ body: { maxHeight: '70vh', overflowY: 'auto', background: '#fff', padding: '24px 40px' } }} // 调整 padding 以容纳搜索框
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto', background: '#fff', padding: '24px 40px' } }}
       >
-        {/* 新增搜索输入框 */}
-        <div style={{ marginBottom: '20px' }}>
-          <Input.Search
-            placeholder="输入关键词搜索报告"
-            allowClear
-            enterButton="搜索"
-            size="large"
-            value={historySearchKeyword}
-            onChange={(e) => setHistorySearchKeyword(e.target.value)}
-            onSearch={(value) => fetchHistoryReports(value)} // 调用带关键词的获取函数
-          />
-        </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <Spin size="large" tip="加载历史报告中..." />
@@ -448,11 +433,9 @@ const Home: React.FC = () => {
           >
             {HistoryReportRow}
           </List>
-        ) : (historySearchKeyword && !loading ? (
-          <div style={{ textAlign: 'center', color: '#6c757d', fontSize: '1.1rem', padding: '40px 0' }}>未找到包含关键词 "{historySearchKeyword}" 的报告</div>
         ) : (
           <div style={{ textAlign: 'center', color: '#6c757d', fontSize: '1.1rem', padding: '40px 0' }}>暂无历史报告</div>
-        ))}
+        )}
       </Modal>
 
       {/* 新闻列表 */}
@@ -509,6 +492,7 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
 
 
 

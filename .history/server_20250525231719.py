@@ -13,8 +13,6 @@ from fastapi import FastAPI, Request # 导入 FastAPI 和 Request
 from fastapi.middleware.cors import CORSMiddleware # 导入 CORS 中间件
 from pydantic import BaseModel # 导入 BaseModel 用于请求体定义
 from typing import Optional # 导入 Optional 用于可选参数
-from fastapi.responses import JSONResponse
-
 # 加载环境变量
 load_dotenv()
 
