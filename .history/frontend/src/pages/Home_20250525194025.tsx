@@ -350,7 +350,7 @@ const Home: React.FC = () => {
             setShowHistory(true);
             fetchHistoryReports();
           }}
-          style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500, marginLeft: '14px' }} // 保持原有部分样式 
+          style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500}} // 保持原有部分样式
         >
         </AntButton>
         {/* 设置按钮 */}
