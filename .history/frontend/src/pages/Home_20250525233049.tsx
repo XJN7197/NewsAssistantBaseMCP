@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col } from 'antd';
+import React, { useState, useCallback } from 'react';
+import { List as AntList, Checkbox, Button as AntButton, Input, Spin, Modal, Typography, Form, message } from 'antd'; // 重命名 List 为 AntList
 import 'antd/dist/reset.css'; // 导入 Ant Design 样式
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,6 +8,8 @@ import { mockNewsData } from '../mock/newsData'
 import { mockReportData } from '../mock/reportData'
 import { SettingOutlined, HistoryOutlined } from '@ant-design/icons'; // 导入设置图标
 import { FixedSizeList as List } from 'react-window'; // 导入 FixedSizeList 并重命名为 List
+import { useState, useEffect, useCallback } from 'react';
+import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col } from 'antd'; // 导入 Row 和 Col
 
 // 导入新创建的组件
 import NewsSearch from '../components/NewsSearch';
@@ -349,6 +351,20 @@ const Home: React.FC = () => {
     return (
       <div style={style} key={item.filename}>
         <AntList.Item
+          // 移除 actions 属性
+          // actions={[
+          //   <AntButton type="link" onClick={() => viewHistoryReport(item.filename)}>查看</AntButton>,
+          //   <AntButton
+          //     type="link"
+          //     onClick={() => {
+          //       viewHistoryReport(item.filename).then(() => {
+          //         setEmailModalVisible(true);
+          //       });
+          //     }}
+          //   >
+          //     发送邮件
+          //   </AntButton>
+          // ]}
           style={{ background: '#fff', borderRadius: '12px', marginBottom: '16px', padding: '20px', boxShadow: '0 2px 12px 0 rgba(0,0,0,0.05)' }} // Apply existing styles
         >
           <Row gutter={16} style={{ width: '100%' }}> {/* 使用 Row 包裹内容 */}
@@ -368,8 +384,8 @@ const Home: React.FC = () => {
               />
             </Col>
             <Col span={6} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}> {/* 右侧列，占 6 份，按钮垂直居中并靠右 */}
-              <Button type="link" onClick={() => viewHistoryReport(item.filename)}>查看报告</Button>
-              <Button
+              <AntButton type="link" onClick={() => viewHistoryReport(item.filename)}>查看</AntButton>
+              <AntButton
                 type="link"
                 onClick={() => {
                   viewHistoryReport(item.filename).then(() => {
@@ -378,7 +394,7 @@ const Home: React.FC = () => {
                 }}
               >
                 发送邮件
-              </Button>
+              </AntButton>
             </Col>
           </Row>
         </AntList.Item>
@@ -397,7 +413,7 @@ const Home: React.FC = () => {
           loading={loading}
         />
         {/* 历史记录按钮 */}
-        <Button
+        <AntButton
           icon={<HistoryOutlined />}
           onClick={() => {
             setShowHistory(true);
@@ -405,9 +421,9 @@ const Home: React.FC = () => {
           }}
           style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500, marginLeft: '14px' }} // 保持原有部分样式
         >
-        </Button>
+        </AntButton>
         {/* 设置按钮 */}
-        <Button
+        <AntButton
           icon={<SettingOutlined />}
           onClick={handleSettingsClick}
           style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500 }} // 保持原有部分样式
@@ -420,9 +436,9 @@ const Home: React.FC = () => {
         open={showHistory}
         onCancel={() => setShowHistory(false)}
         footer={[
-          <Button key="close" type="primary" onClick={() => setShowHistory(false)} style={{ borderRadius: '12px' }}>
+          <AntButton key="close" type="primary" onClick={() => setShowHistory(false)} style={{ borderRadius: '12px' }}>
             关闭
-          </Button>
+          </AntButton>
         ]}
         width="60vw"
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto', background: '#fff', padding: '24px 40px' } }} // 调整 padding 以容纳搜索框
@@ -470,7 +486,7 @@ const Home: React.FC = () => {
       {/* 一键分析按钮 */}
       {newsList.length > 0 && !newsList[0].error && ( // 仅在有新闻且无错误时显示
         <div className={styles['analyze-btn']}> {/* 使用 Home.module.css 中的样式 */}
-          <Button
+          <AntButton
             type="primary"
             onClick={handleAnalyze}
             loading={loading}
@@ -478,7 +494,7 @@ const Home: React.FC = () => {
             style={{ borderRadius: '16px', padding: '16px 48px', fontSize: '1.2rem', fontWeight: 600, background: 'linear-gradient(90deg, #34e89e 0%, #0f3443 100%)' }} // 保持原有部分样式
           >
             一键舆情分析
-          </Button>
+          </AntButton>
         </div>
       )}
 

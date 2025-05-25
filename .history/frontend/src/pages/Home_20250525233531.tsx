@@ -368,7 +368,7 @@ const Home: React.FC = () => {
               />
             </Col>
             <Col span={6} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}> {/* 右侧列，占 6 份，按钮垂直居中并靠右 */}
-              <Button type="link" onClick={() => viewHistoryReport(item.filename)}>查看报告</Button>
+              <Button type="link" onClick={() => viewHistoryReport(item.filename)}>查看</Button>
               <Button
                 type="link"
                 onClick={() => {
