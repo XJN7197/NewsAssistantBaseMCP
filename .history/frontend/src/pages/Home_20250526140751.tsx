@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col, DatePicker, Skeleton } from 'antd';
+import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col, DatePicker } from 'antd';
 import type { RangePickerProps } from 'antd/es/date-picker';
 import dayjs from 'dayjs';
 import 'antd/dist/reset.css'; // 导入 Ant Design 样式
@@ -29,7 +29,6 @@ const Home: React.FC = () => {
   const [selectedNews, setSelectedNews] = useState<Set<number>>(new Set());
   // 是否正在加载
   const [loading, setLoading] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(false);
   // 分析报告内容
   const [report, setReport] = useState<string | null>(null)
   // 控制报告弹窗显示
@@ -294,7 +293,7 @@ const Home: React.FC = () => {
   // 添加获取历史报告列表函数，支持搜索关键词
   const fetchHistoryReports = useCallback(async (keyword?: string, page: number = 1, append: boolean = false, dates?: [dayjs.Dayjs | null, dayjs.Dayjs | null]) => {
     if (page === 1) {
-      setHistoryLoading(true);
+      setLoading(true);
     } else {
       setLoadingMore(true);
     }
@@ -333,7 +332,7 @@ const Home: React.FC = () => {
       message.error(`获取历史报告失败: ${error}`);
     } finally {
       if (page === 1) {
-        setHistoryLoading(false);
+        setLoading(false);
       } else {
         setLoadingMore(false);
       }
@@ -345,7 +344,7 @@ const Home: React.FC = () => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
     // 当滚动到距离底部100px时，加载更多数据
     if (scrollHeight - scrollTop - clientHeight < 100 && hasMore && !loadingMore && !loading) {
-      fetchHistoryReports(historySearchKeyword, currentPage + 1, true, dateRange);
+      fetchHistoryReports(historySearchKeyword, currentPage + 1, true);
     }
   }, [historySearchKeyword, currentPage, hasMore, loadingMore, loading, fetchHistoryReports]);
 
@@ -448,9 +447,7 @@ const Home: React.FC = () => {
           icon={<HistoryOutlined />}
           onClick={() => {
             setShowHistory(true);
-            setHistorySearchKeyword('');
-            setDateRange([null, null]);
-            fetchHistoryReports('', 1, false, [null, null]);
+            fetchHistoryReports();
           }}
           style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500, marginLeft: '14px' }} // 保持原有部分样式
         >
@@ -515,17 +512,9 @@ const Home: React.FC = () => {
           style={{ overflowY: 'auto', maxHeight: '60vh' }}
           onScroll={handleScroll}
         >
-          {historyLoading && currentPage === 1 ? (
-            <div className={styles['history-skeleton-container']}>
-              {[1, 2, 3].map((item) => (
-                <div key={item} className={styles['history-skeleton-item']}>
-                  <Skeleton
-                    active
-                    paragraph={{ rows: 2 }}
-                    className={styles['history-skeleton']}
-                  />
-                </div>
-              ))}
+          {loading && currentPage === 1 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Spin size="large" tip="加载历史报告中..." />
             </div>
           ) : historyReports.length > 0 ? (
             <AntList

@@ -515,7 +515,7 @@ const Home: React.FC = () => {
           style={{ overflowY: 'auto', maxHeight: '60vh' }}
           onScroll={handleScroll}
         >
-          {historyLoading && currentPage === 1 ? (
+          {loading && currentPage === 1 ? (
             <div className={styles['history-skeleton-container']}>
               {[1, 2, 3].map((item) => (
                 <div key={item} className={styles['history-skeleton-item']}>

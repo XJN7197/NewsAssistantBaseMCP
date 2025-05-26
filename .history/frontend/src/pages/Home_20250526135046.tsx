@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col, DatePicker, Skeleton } from 'antd';
-import type { RangePickerProps } from 'antd/es/date-picker';
-import dayjs from 'dayjs';
+import { Input, Button, List as AntList, Typography, Modal, message, Spin, Row, Col } from 'antd';
 import 'antd/dist/reset.css'; // 导入 Ant Design 样式
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,7 +27,6 @@ const Home: React.FC = () => {
   const [selectedNews, setSelectedNews] = useState<Set<number>>(new Set());
   // 是否正在加载
   const [loading, setLoading] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(false);
   // 分析报告内容
   const [report, setReport] = useState<string | null>(null)
   // 控制报告弹窗显示
@@ -49,9 +46,8 @@ const Home: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [historyReports, setHistoryReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any>(null);
-  // 新增状态：历史报告搜索关键词和日期范围
+  // 新增状态：历史报告搜索关键词
   const [historySearchKeyword, setHistorySearchKeyword] = useState('');
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
   // 新增分页相关状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalReports, setTotalReports] = useState(0);
@@ -292,9 +288,9 @@ const Home: React.FC = () => {
   };
 
   // 添加获取历史报告列表函数，支持搜索关键词
-  const fetchHistoryReports = useCallback(async (keyword?: string, page: number = 1, append: boolean = false, dates?: [dayjs.Dayjs | null, dayjs.Dayjs | null]) => {
+  const fetchHistoryReports = useCallback(async (keyword?: string, page: number = 1, append: boolean = false) => {
     if (page === 1) {
-      setHistoryLoading(true);
+      setLoading(true);
     } else {
       setLoadingMore(true);
     }
@@ -304,9 +300,6 @@ const Home: React.FC = () => {
       let url = `http://localhost:8000/reports?page=${page}&page_size=${PAGE_SIZE}`;
       if (keyword) {
         url += `&keyword=${encodeURIComponent(keyword)}`;
-      }
-      if (dates && dates[0] && dates[1]) {
-        url += `&start_date=${dates[0].format('YYYY-MM-DD')}&end_date=${dates[1].format('YYYY-MM-DD')}`;
       }
       
       const response = await fetch(url);
@@ -333,7 +326,7 @@ const Home: React.FC = () => {
       message.error(`获取历史报告失败: ${error}`);
     } finally {
       if (page === 1) {
-        setHistoryLoading(false);
+        setLoading(false);
       } else {
         setLoadingMore(false);
       }
@@ -345,7 +338,7 @@ const Home: React.FC = () => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
     // 当滚动到距离底部100px时，加载更多数据
     if (scrollHeight - scrollTop - clientHeight < 100 && hasMore && !loadingMore && !loading) {
-      fetchHistoryReports(historySearchKeyword, currentPage + 1, true, dateRange);
+      fetchHistoryReports(historySearchKeyword, currentPage + 1, true);
     }
   }, [historySearchKeyword, currentPage, hasMore, loadingMore, loading, fetchHistoryReports]);
 
@@ -448,9 +441,7 @@ const Home: React.FC = () => {
           icon={<HistoryOutlined />}
           onClick={() => {
             setShowHistory(true);
-            setHistorySearchKeyword('');
-            setDateRange([null, null]);
-            fetchHistoryReports('', 1, false, [null, null]);
+            fetchHistoryReports();
           }}
           style={{ width:'50px',borderRadius: '16px', padding: '14px', fontSize: '1.1rem', fontWeight: 500, marginLeft: '14px' }} // 保持原有部分样式
         >
@@ -476,56 +467,29 @@ const Home: React.FC = () => {
         width="60vw"
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto', background: '#fff', padding: '24px 40px' } }} // 调整 padding 以容纳搜索框
       >
-        {/* 搜索和日期筛选区域 */}
+        {/* 新增搜索输入框 */}
         <div style={{ marginBottom: '20px' }}>
-          <Row gutter={16}>
-            <Col span={16}>
-              <Input.Search
-                placeholder="输入关键词搜索报告"
-                allowClear
-                enterButton="搜索"
-                size="large"
-                value={historySearchKeyword}
-                onChange={(e) => setHistorySearchKeyword(e.target.value)}
-                onSearch={(value) => {
-                  setCurrentPage(1);
-                  setHistoryReports([]);
-                  fetchHistoryReports(value, 1, false, dateRange);
-                }}
-              />
-            </Col>
-            <Col span={8}>
-              <DatePicker.RangePicker
-                style={{ width: '100%' }}
-                size="large"
-                value={dateRange}
-                onChange={(dates) => {
-                  setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null]);
-                  setCurrentPage(1);
-                  setHistoryReports([]);
-                  fetchHistoryReports(historySearchKeyword, 1, false, dates as [dayjs.Dayjs | null, dayjs.Dayjs | null]);
-                }}
-                allowClear
-                placeholder={['开始日期', '结束日期']}
-              />
-            </Col>
-          </Row>
+          <Input.Search
+            placeholder="输入关键词搜索报告"
+            allowClear
+            enterButton="搜索"
+            size="large"
+            value={historySearchKeyword}
+            onChange={(e) => setHistorySearchKeyword(e.target.value)}
+            onSearch={(value) => {
+              setCurrentPage(1);
+              setHistoryReports([]);
+              fetchHistoryReports(value, 1, false);
+            }}
+          />
         </div>
         <div 
           style={{ overflowY: 'auto', maxHeight: '60vh' }}
           onScroll={handleScroll}
         >
-          {historyLoading && currentPage === 1 ? (
-            <div className={styles['history-skeleton-container']}>
-              {[1, 2, 3].map((item) => (
-                <div key={item} className={styles['history-skeleton-item']}>
-                  <Skeleton
-                    active
-                    paragraph={{ rows: 2 }}
-                    className={styles['history-skeleton']}
-                  />
-                </div>
-              ))}
+          {loading && currentPage === 1 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Spin size="large" tip="加载历史报告中..." />
             </div>
           ) : historyReports.length > 0 ? (
             <AntList

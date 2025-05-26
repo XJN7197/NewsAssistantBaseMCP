@@ -503,7 +503,7 @@ async def send_email_endpoint(request_body: EmailRequest):
 
 # 定义获取历史报告列表的接口
 @app.get("/reports")
-async def get_reports(keyword: str = None, page: int = 1, page_size: int = 10, start_date: str = None, end_date: str = None):
+async def get_reports(keyword: str = None, page: int = 1, page_size: int = 10):
     """获取所有报告列表，支持关键词搜索和分页"""
     try:
         # 确保报告目录存在
@@ -529,35 +529,22 @@ async def get_reports(keyword: str = None, page: int = 1, page_size: int = 10, s
                         else:
                             break
                 
-                # 转换日期字符串为datetime对象，用于日期范围比较
-                report_date = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
-                
-                # 检查是否在日期范围内
-                in_date_range = True
-                if start_date:
-                    start = datetime.strptime(start_date, "%Y-%m-%d")
-                    in_date_range = in_date_range and report_date.date() >= start.date()
-                if end_date:
-                    end = datetime.strptime(end_date, "%Y-%m-%d")
-                    in_date_range = in_date_range and report_date.date() <= end.date()
-                
-                # 如果在日期范围内，继续检查关键词
-                if in_date_range:
-                    if keyword:
-                        # 如果文件名或内容中包含关键词，则添加到结果中
-                        if keyword.lower() in filename.lower() or keyword.lower() in content.lower():
-                            reports.append({
-                                "filename": filename,
-                                "created_at": created_at,
-                                "summary": content
-                            })
-                    else:
-                        # 如果没有关键词，则添加所有报告
+                # 如果有关键词，检查文件名和内容中是否包含关键词
+                if keyword:
+                    # 如果文件名或内容中包含关键词，则添加到结果中
+                    if keyword.lower() in filename.lower() or keyword.lower() in content.lower():
                         reports.append({
                             "filename": filename,
                             "created_at": created_at,
                             "summary": content
                         })
+                else:
+                    # 如果没有关键词，则添加所有报告
+                    reports.append({
+                        "filename": filename,
+                        "created_at": created_at,
+                        "summary": content
+                    })
         
         # 按创建时间倒序排序（最新的在前面）
         reports.sort(key=lambda x: x["created_at"], reverse=True)
@@ -632,5 +619,6 @@ async def save_report_endpoint(request_body: SaveReportRequest):
 if __name__ == "__main__":
     # mcp.run(transport='stdio')
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 

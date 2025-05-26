@@ -503,81 +503,60 @@ async def send_email_endpoint(request_body: EmailRequest):
 
 # 定义获取历史报告列表的接口
 @app.get("/reports")
-async def get_reports(keyword: str = None, page: int = 1, page_size: int = 10, start_date: str = None, end_date: str = None):
-    """获取所有报告列表，支持关键词搜索和分页"""
-    try:
-        # 确保报告目录存在
-        if not os.path.exists("./sentiment_reports"):
-            os.makedirs("./sentiment_reports")
-            return {"reports": [], "total": 0, "page": page, "page_size": page_size}
+async def get_reports(keyword: Optional[str] = None, page: int = 1, page_size: int = 10):
+    """Get a list of historical reports, optionally filtered by keyword with pagination."""
+    output_dir = "sentiment_reports"
+    reports_list = []
+    if not os.path.exists(output_dir):
+        return JSONResponse(content={"reports": [], "total": 0, "page": page, "page_size": page_size})
 
-        # 获取所有报告文件
-        reports = []
-        for filename in os.listdir("./sentiment_reports"):
-            if filename.endswith(".md"):
-                file_path = os.path.join("./sentiment_reports", filename)
-                # 获取文件创建时间
-                created_time = os.path.getctime(file_path)
-                created_at = datetime.fromtimestamp(created_time).strftime("%Y-%m-%d %H:%M:%S")
-                
-                # 读取文件前5行作为摘要
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = ""
-                    for i, line in enumerate(f):
-                        if i < 5:
-                            content += line
-                        else:
-                            break
-                
-                # 转换日期字符串为datetime对象，用于日期范围比较
-                report_date = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
-                
-                # 检查是否在日期范围内
-                in_date_range = True
-                if start_date:
-                    start = datetime.strptime(start_date, "%Y-%m-%d")
-                    in_date_range = in_date_range and report_date.date() >= start.date()
-                if end_date:
-                    end = datetime.strptime(end_date, "%Y-%m-%d")
-                    in_date_range = in_date_range and report_date.date() <= end.date()
-                
-                # 如果在日期范围内，继续检查关键词
-                if in_date_range:
-                    if keyword:
-                        # 如果文件名或内容中包含关键词，则添加到结果中
-                        if keyword.lower() in filename.lower() or keyword.lower() in content.lower():
-                            reports.append({
-                                "filename": filename,
-                                "created_at": created_at,
-                                "summary": content
-                            })
-                    else:
-                        # 如果没有关键词，则添加所有报告
-                        reports.append({
-                            "filename": filename,
-                            "created_at": created_at,
-                            "summary": content
-                        })
-        
-        # 按创建时间倒序排序（最新的在前面）
-        reports.sort(key=lambda x: x["created_at"], reverse=True)
-        
-        # 计算总数
-        total = len(reports)
-        
-        # 分页处理
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paginated_reports = reports[start_idx:end_idx]
-        
-        return {
-            "reports": paginated_reports,
-            "total": total,
-            "page": page,
-            "page_size": page_size
-        }
-    except Exception as e:
-        return {"message": str(e)}
+    # 获取所有报告文件
+    all_reports = []
+    for filename in os.listdir(output_dir):
+        if filename.endswith(".md"):
+            file_path = os.path.join(output_dir, filename)
+            created_at = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+            # For simplicity, let's read the first few lines as summary
+            summary = ""
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    # Read up to 5 lines or 200 characters for summary
+                    lines = [f.readline() for _ in range(5)]
+                    summary = "".join(lines).strip()
+                    if len(summary) > 200:
+                        summary = summary[:200] + "..."
+            except Exception as e:
+                print(f"Error reading summary from {filename}: {e}")
+                summary = "无法读取摘要"
+
+            report_info = {
+                "filename": filename,
+                "created_at": created_at,
+                "summary": summary
+            }
+            all_reports.append(report_info)
+
+    # Sort reports by creation date, newest first
+    all_reports.sort(key=lambda x: datetime.strptime(x['created_at'], '%Y-%m-%d %H:%M:%S'), reverse=True)
+
+    # Filter by keyword if provided
+    if keyword:
+        keyword_lower = keyword.lower()
+        all_reports = [report for report in all_reports if keyword_lower in report['filename'].lower() or keyword_lower in report['summary'].lower()]
+    
+    # 计算总数和分页
+    total = len(all_reports)
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    reports_list = all_reports[start_idx:end_idx]
+
+    return JSONResponse(content={
+        "reports": reports_list, 
+        "total": total, 
+        "page": page, 
+        "page_size": page_size
+    })
+
 
 @app.get("/reports/{filename:path}")
 async def get_report_content(filename: str):
@@ -632,5 +611,6 @@ async def save_report_endpoint(request_body: SaveReportRequest):
 if __name__ == "__main__":
     # mcp.run(transport='stdio')
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
