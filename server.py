@@ -12,6 +12,8 @@ from openai import OpenAI
 from fastapi import FastAPI, Request # 导入 FastAPI 和 Request
 from fastapi.middleware.cors import CORSMiddleware # 导入 CORS 中间件
 from pydantic import BaseModel # 导入 BaseModel 用于请求体定义
+from typing import Optional # 导入 Optional 用于可选参数
+from fastapi.responses import JSONResponse
 
 # 加载环境变量
 load_dotenv()
@@ -501,70 +503,106 @@ async def send_email_endpoint(request_body: EmailRequest):
 
 # 定义获取历史报告列表的接口
 @app.get("/reports")
-async def get_reports_endpoint():
-    """获取历史分析报告列表"""
+async def get_reports(keyword: str = None, page: int = 1, page_size: int = 10, start_date: str = None, end_date: str = None):
+    """获取所有报告列表，支持关键词搜索和分页"""
     try:
-        output_dir = "./sentiment_reports"
-        os.makedirs(output_dir, exist_ok=True)
-        
+        # 确保报告目录存在
+        if not os.path.exists("./sentiment_reports"):
+            os.makedirs("./sentiment_reports")
+            return {"reports": [], "total": 0, "page": page, "page_size": page_size}
+
+        # 获取所有报告文件
         reports = []
-        for filename in os.listdir(output_dir):
+        for filename in os.listdir("./sentiment_reports"):
             if filename.endswith(".md"):
-                file_path = os.path.join(output_dir, filename)
-                created_time = datetime.fromtimestamp(os.path.getctime(file_path))
+                file_path = os.path.join("./sentiment_reports", filename)
+                # 获取文件创建时间
+                created_time = os.path.getctime(file_path)
+                created_at = datetime.fromtimestamp(created_time).strftime("%Y-%m-%d %H:%M:%S")
                 
-                # 提取报告标题和关键词
-                keyword = ""
-                if filename.startswith("sentiment_"):
-                    parts = filename.split("_")
-                    if len(parts) > 1:
-                        keyword = parts[1]
+                # 读取文件前5行作为摘要
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = ""
+                    for i, line in enumerate(f):
+                        if i < 5:
+                            content += line
+                        else:
+                            break
                 
-                # 读取文件内容的前100个字符作为摘要
-                summary = ""
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        content = f.read(500)
-                        summary = content[:100] + "..." if len(content) > 100 else content
-                except Exception:
-                    summary = "无法读取报告内容"
+                # 转换日期字符串为datetime对象，用于日期范围比较
+                report_date = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
                 
-                reports.append({
-                    "filename": filename,
-                    "keyword": keyword,
-                    "created_at": created_time.strftime('%Y-%m-%d %H:%M:%S'),
-                    "summary": summary
-                })
+                # 检查是否在日期范围内
+                in_date_range = True
+                if start_date:
+                    start = datetime.strptime(start_date, "%Y-%m-%d")
+                    in_date_range = in_date_range and report_date.date() >= start.date()
+                if end_date:
+                    end = datetime.strptime(end_date, "%Y-%m-%d")
+                    in_date_range = in_date_range and report_date.date() <= end.date()
+                
+                # 如果在日期范围内，继续检查关键词
+                if in_date_range:
+                    if keyword:
+                        # 如果文件名或内容中包含关键词，则添加到结果中
+                        if keyword.lower() in filename.lower() or keyword.lower() in content.lower():
+                            reports.append({
+                                "filename": filename,
+                                "created_at": created_at,
+                                "summary": content
+                            })
+                    else:
+                        # 如果没有关键词，则添加所有报告
+                        reports.append({
+                            "filename": filename,
+                            "created_at": created_at,
+                            "summary": content
+                        })
         
-        # 按创建时间倒序排序
+        # 按创建时间倒序排序（最新的在前面）
         reports.sort(key=lambda x: x["created_at"], reverse=True)
         
-        return {"reports": reports}
+        # 计算总数
+        total = len(reports)
+        
+        # 分页处理
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_reports = reports[start_idx:end_idx]
+        
+        return {
+            "reports": paginated_reports,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
     except Exception as e:
-        return {"status": "error", "message": f"获取报告列表失败: {str(e)}"}
+        return {"message": str(e)}
 
-# 定义获取单个报告内容的接口
-@app.get("/reports/{filename}")
-async def get_report_content_endpoint(filename: str):
-    """获取单个报告的内容"""
+@app.get("/reports/{filename:path}")
+async def get_report_content(filename: str):
+    """Get the content of a specific report."""
+    output_dir = "sentiment_reports"
+    file_path = os.path.join(output_dir, filename)
+    if not os.path.exists(file_path):
+        return JSONResponse(content={"message": "Report not found"}, status_code=404)
+
     try:
-        file_path = os.path.join("./sentiment_reports", filename)
-        if not os.path.exists(file_path):
-            return {"status": "error", "message": "报告不存在"}
-        
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
-        return {"content": content, "filename": filename}
+        return JSONResponse(content={
+            "filename": filename,
+            "content": content
+        })
     except Exception as e:
-        return {"status": "error", "message": f"获取报告内容失败: {str(e)}"}
-
-
+        print(f"Error reading report file {filename}: {e}")
+        return JSONResponse(content={"message": "Error reading report file"}, status_code=500)
 
 # 在 ConfigUpdateRequest 类后面添加新的请求体模型
 class SaveReportRequest(BaseModel):
     content: str
-    filename: str
+    # filename: str # Remove filename
+    keyword: str # Add keyword
 
 # 在最后一个路由前添加新的路由
 @app.post("/save_report")
@@ -573,12 +611,20 @@ async def save_report_endpoint(request_body: SaveReportRequest):
     try:
         output_dir = "./sentiment_reports"
         os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, request_body.filename)
+        
+        # Generate filename using keyword and timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        # Ensure keyword is safe for filename, replace potentially problematic characters
+        safe_keyword = request_body.keyword.replace(' ', '_').replace('/', '_').replace('\\', '_').replace(':', '-').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
+        # filename = f"【{safe_keyword}】舆情分析报告_{timestamp}.md" # Remove "舆情分析报告"
+        filename = f"【{safe_keyword}】_{timestamp}.md"
+        
+        file_path = os.path.join(output_dir, filename)
         
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(request_body.content)
         
-        return {"status": "success", "message": "报告已保存", "file_path": file_path}
+        return {"status": "success", "message": "报告已保存", "file_path": file_path, "filename": filename} # Return filename
     except Exception as e:
         return {"status": "error", "message": f"保存报告失败: {str(e)}"}
 

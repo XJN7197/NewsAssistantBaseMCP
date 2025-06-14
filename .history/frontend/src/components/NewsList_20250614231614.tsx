@@ -1,7 +1,8 @@
-import React from 'react';
-import { List, Spin, Typography } from 'antd';
+import React, { useRef, useEffect } from 'react';
+import { List,  Skeleton } from 'antd';
 import NewsCard from './NewsCard';
-import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
+import styles from '../pages/Home.module.css';
+
 
 
 interface NewsListProps {
