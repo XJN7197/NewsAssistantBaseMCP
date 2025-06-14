@@ -20,7 +20,7 @@ const DynamicBackground: React.FC = () => {
     const ctx = canvas?.getContext('2d');
     let animationId: number;
 
-    if (!ctx || !canvas) return;
+    if (!ctx) return;
 
     // 创建 60 个粒子，每个粒子有随机的位置、半径和速度
     const particles = Array.from({ length: 60 }, () => ({
@@ -32,7 +32,6 @@ const DynamicBackground: React.FC = () => {
     }));
 
     function draw() {
-      if (!ctx || !canvas) return; // 修复 TS 报错，确保 ctx 和 canvas 存在
       ctx.clearRect(0, 0, canvas.width, canvas.height); // 清空画布
       // 画粒子间连线
       for (let i = 0; i < particles.length; i++) {

@@ -12,6 +12,44 @@ from openai import OpenAI
 from fastapi import FastAPI, Request # 导入 FastAPI 和 Request
 from fastapi.middleware.cors import CORSMiddleware # 导入 CORS 中间件
 from pydantic import BaseModel # 导入 BaseModel 用于请求体定义
+from typing import Optional # 导入 Optional 用于可选参数
+from fastapi.responses import JSONResponse
+from typing import Annotated
+
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
+
+# 加载环境变量
+load_dotenv()
+
+# 数据库配置
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql+mysqlconnector://root:1111@localhost:3306/newsMCP")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# 定义数据库模型
+class SentimentReport(Base):
+    __tablename__ = "sentiment_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(255), unique=True, index=True)
+    content = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+
+# 创建所有表
+Base.metadata.create_all(bind=engine)
+
+# 依赖项
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # 加载环境变量
 load_dotenv()
@@ -153,8 +191,11 @@ async def http_search_news(keyword: str) -> list:
 
 
 # @mcp.tool() 是 MCP 框架的装饰器，标记该函数为一个可调用的工具
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
 @mcp.tool()
-async def analyze_sentiment(text: str, filename: str) -> str:
+async def analyze_sentiment(text: str, filename: str, db: Session = Depends(get_db)) -> str:
     """
     对传入的一段文本内容进行情感分析，并保存为指定名称的 Markdown 文件。
 
@@ -181,7 +222,7 @@ async def analyze_sentiment(text: str, filename: str) -> str:
     )
     result = response.choices[0].message.content.strip()
 
-    # 生成 Markdown 格式的舆情分析报告，并存放进设置好的输出目录
+    # 生成 Markdown 格式的舆情分析报告
     markdown = f"""# 舆情分析报告
 
 **分析时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -199,17 +240,16 @@ async def analyze_sentiment(text: str, filename: str) -> str:
 {result}
 """
 
-    output_dir = "./sentiment_reports"
-    os.makedirs(output_dir, exist_ok=True)
-
-    if not filename:
-        filename = f"sentiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-
-    file_path = os.path.join(output_dir, filename)
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(markdown)
-
-    return file_path
+    # 将报告保存到数据库
+    try:
+        db_report = SentimentReport(filename=filename, content=markdown)
+        db.add(db_report)
+        db.commit()
+        db.refresh(db_report)
+        return f"✅ 报告已保存到数据库，文件名: {filename}"
+    except Exception as e:
+        db.rollback()
+        return f"❌ 报告保存到数据库失败: {str(e)}"
 
 # 新增一个用于 HTTP 通信的舆情分析工具方法
 @mcp.tool()
@@ -277,7 +317,7 @@ async def http_analyze_sentiment(news_list: list) -> str:
         return f"❌ LLM 调用失败: {str(e)}"
 
 @mcp.tool()
-async def send_email_with_attachment(to: str, subject: str, body: str, filename: str) -> str:
+async def send_email_with_attachment(to: str, subject: str, body: str, filename: str, db: Session = Depends(get_db)) -> str:
     """
     发送带附件的邮件。
 
@@ -285,7 +325,7 @@ async def send_email_with_attachment(to: str, subject: str, body: str, filename:
         to: 收件人邮箱地址
         subject: 邮件标题
         body: 邮件正文
-        filename (str): 保存的 Markdown 文件名（不含路径）
+        filename (str): 报告的文件名（数据库中的文件名）
 
     返回:
         邮件发送状态说明
@@ -297,10 +337,10 @@ async def send_email_with_attachment(to: str, subject: str, body: str, filename:
     sender_email = os.getenv("EMAIL_USER")
     sender_pass = os.getenv("EMAIL_PASS")
 
-    # 获取附件文件的路径，并进行检查是否存在
-    full_path = os.path.abspath(os.path.join("./sentiment_reports", filename))
-    if not os.path.exists(full_path):
-        return f"❌ 附件路径无效，未找到文件: {full_path}"
+    # 从数据库中获取报告内容
+    report = db.query(SentimentReport).filter(SentimentReport.filename == filename).first()
+    if not report:
+        return f"❌ 报告未找到: {filename}"
 
     # 创建邮件并设置内容
     msg = EmailMessage()
@@ -311,18 +351,15 @@ async def send_email_with_attachment(to: str, subject: str, body: str, filename:
 
     # 添加附件并发送邮件
     try:
-        with open(full_path, "rb") as f:
-            file_data = f.read()
-            file_name = os.path.basename(full_path)
-            msg.add_attachment(file_data, maintype="application", subtype="octet-stream", filename=file_name)
+        msg.add_attachment(report.content.encode('utf-8'), maintype="application", subtype="octet-stream", filename=filename)
     except Exception as e:
-        return f"❌ 附件读取失败: {str(e)}"
+        return f"❌ 附件添加失败: {str(e)}"
 
     try:
         with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
             server.login(sender_email, sender_pass)
             server.send_message(msg)
-        return f"✅ 邮件已成功发送给 {to}，附件路径: {full_path}"
+        return f"✅ 邮件已成功发送给 {to}，附件文件名: {filename}"
     except Exception as e:
         return f"❌ 邮件发送失败: {str(e)}"
 
@@ -469,31 +506,44 @@ class EmailRequest(BaseModel):
 
 # 定义HTTP邮件发送接口
 @app.post("/send_email")
-async def send_email_endpoint(request_body: EmailRequest):
+async def send_email_endpoint(request: EmailRequest, db: Session = Depends(get_db)):
     """通过HTTP接口发送邮件"""
     try:
-        # 生成文件名
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"sentiment_report_{timestamp}.md"
-        
-        # 保存报告到文件
-        output_dir = "./sentiment_reports"
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, filename)
-        
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(request_body.report_content)
-        
+        # 从请求体中获取报告内容，并生成文件名
+        report_content = request_body.report_content
+        # 假设 report_content 包含了文件名，或者可以通过某种方式从 content 中提取
+        # 这里为了简化，我们假设 filename 已经作为 EmailRequest 的一部分传入，或者从 report_content 中解析
+        # 如果 filename 不在 EmailRequest 中，需要调整 EmailRequest 模型
+        # 为了与 analyze_sentiment 的返回保持一致，这里需要一个实际的文件名
+        # 暂时先用一个占位符，后续需要根据实际情况调整
+        # 更好的做法是，analyze_sentiment 直接返回保存到数据库的报告的 filename
+        # 然后前端在调用 send_email 时，将这个 filename 传过来
+        # 或者，send_email_endpoint 接收 report_id 或 filename，然后从数据库中查询
+
+        # 临时处理：从 report_content 中尝试提取文件名，或者使用一个默认文件名
+        # 实际应用中，这里应该传入一个已存在的报告文件名
+        # 这里需要根据实际业务逻辑来确定如何获取 filename
+        # 假设 report_content 是 analyze_sentiment 返回的字符串，其中包含了文件名
+        # 例如："✅ 报告已保存到数据库，文件名: sentiment_20240101_123456.md"
+        import re
+        match = re.search(r'文件名: (\S+\.md)', report_content)
+        if match:
+            filename_from_content = match.group(1)
+        else:
+            # 如果无法从内容中提取，则需要一个默认或错误处理
+            return {"status": "error", "message": "无法从报告内容中提取文件名，请确保报告已保存并提供文件名。"}
+
         # 发送邮件
         result = await send_email_with_attachment(
             to=request_body.to,
             subject=request_body.subject,
             body="请查收附件中的舆情分析报告。",
-            filename=filename
+            filename=filename_from_content, # 使用从内容中提取的文件名
+            db=db # 传递数据库会话
         )
         
         if result.startswith("✅"):
-            return {"status": "success", "message": "邮件发送成功", "filename": filename}
+            return {"status": "success", "message": "邮件发送成功", "filename": filename_from_content}
         else:
             return {"status": "error", "message": result}
     except Exception as e:
@@ -501,89 +551,97 @@ async def send_email_endpoint(request_body: EmailRequest):
 
 # 定义获取历史报告列表的接口
 @app.get("/reports")
-async def get_reports_endpoint():
-    """获取历史分析报告列表"""
+async def get_reports(
+    keyword: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db)
+):
+    """获取所有报告列表，支持关键词搜索和分页"""
     try:
-        output_dir = "./sentiment_reports"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        reports = []
-        for filename in os.listdir(output_dir):
-            if filename.endswith(".md"):
-                file_path = os.path.join(output_dir, filename)
-                created_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                
-                # 提取报告标题和关键词
-                keyword = ""
-                if filename.startswith("sentiment_"):
-                    parts = filename.split("_")
-                    if len(parts) > 1:
-                        keyword = parts[1]
-                
-                # 读取文件内容的前100个字符作为摘要
-                summary = ""
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        content = f.read(500)
-                        summary = content[:100] + "..." if len(content) > 100 else content
-                except Exception:
-                    summary = "无法读取报告内容"
-                
-                reports.append({
-                    "filename": filename,
-                    "keyword": keyword,
-                    "created_at": created_time.strftime('%Y-%m-%d %H:%M:%S'),
-                    "summary": summary
-                })
-        
-        # 按创建时间倒序排序
-        reports.sort(key=lambda x: x["created_at"], reverse=True)
-        
-        return {"reports": reports}
-    except Exception as e:
-        return {"status": "error", "message": f"获取报告列表失败: {str(e)}"}
+        query = db.query(SentimentReport)
 
-# 定义获取单个报告内容的接口
-@app.get("/reports/{filename}")
-async def get_report_content_endpoint(filename: str):
-    """获取单个报告的内容"""
+        if keyword:
+            query = query.filter(SentimentReport.filename.ilike(f"%{keyword}%") | SentimentReport.content.ilike(f"%{keyword}%"))
+
+        if start_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(SentimentReport.created_at >= start)
+        if end_date:
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(SentimentReport.created_at <= end)
+
+        total = query.count()
+        reports = query.order_by(SentimentReport.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        results = []
+        for report in reports:
+            # 读取文件前5行作为摘要
+            content_lines = report.content.split('\n')
+            summary = "\n".join(content_lines[:5])
+            results.append({
+                "filename": report.filename,
+                "created_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "summary": summary
+            })
+        
+        return {
+            "reports": results,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    except Exception as e:
+        return {"message": str(e)}
+
+@app.get("/reports/{filename:path}")
+async def get_report_content(filename: str, db: Session = Depends(get_db)):
+    """Get the content of a specific report."""
+    report = db.query(SentimentReport).filter(SentimentReport.filename == filename).first()
+    if not report:
+        return JSONResponse(content={"message": "Report not found"}, status_code=404)
+
     try:
-        file_path = os.path.join("./sentiment_reports", filename)
-        if not os.path.exists(file_path):
-            return {"status": "error", "message": "报告不存在"}
-        
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        
-        return {"content": content, "filename": filename}
+        return JSONResponse(content={
+            "filename": report.filename,
+            "content": report.content
+        })
     except Exception as e:
-        return {"status": "error", "message": f"获取报告内容失败: {str(e)}"}
-
-
+        print(f"Error reading report from DB {filename}: {e}")
+        return JSONResponse(content={"message": "Error reading report from DB"}, status_code=500)
 
 # 在 ConfigUpdateRequest 类后面添加新的请求体模型
 class SaveReportRequest(BaseModel):
     content: str
-    filename: str
+    # filename: str # Remove filename
+    keyword: str # Add keyword
 
 # 在最后一个路由前添加新的路由
 @app.post("/save_report")
-async def save_report_endpoint(request_body: SaveReportRequest):
-    """保存报告到指定目录"""
+async def save_report_endpoint(request_body: SaveReportRequest, db: Session = Depends(get_db)):
+    """保存报告到数据库"""
     try:
-        output_dir = "./sentiment_reports"
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, request_body.filename)
+        # Generate filename using keyword and timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        # Ensure keyword is safe for filename, replace potentially problematic characters
+        safe_keyword = request_body.keyword.replace(' ', '_').replace('/', '_').replace('\\', '_').replace(':', '-').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
+        filename = f"【{safe_keyword}】_{timestamp}.md"
         
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(request_body.content)
+        # 将报告保存到数据库
+        db_report = SentimentReport(filename=filename, content=request_body.content)
+        db.add(db_report)
+        db.commit()
+        db.refresh(db_report)
         
-        return {"status": "success", "message": "报告已保存", "file_path": file_path}
+        return {"status": "success", "message": "报告已保存到数据库", "filename": filename} # Return filename
     except Exception as e:
+        db.rollback()
         return {"status": "error", "message": f"保存报告失败: {str(e)}"}
 
 
 if __name__ == "__main__":
     # mcp.run(transport='stdio')
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
 

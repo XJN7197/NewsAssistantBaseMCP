@@ -587,3 +587,30 @@ if __name__ == "__main__":
     # mcp.run(transport='stdio')
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
+function fn=(str)=>{
+    const map={
+        ")":"(",
+        "}":"{",
+        "]":"[",
+    }
+    const stack=[];
+    for(let ch of str){
+        if(ch==="("||ch==="{"||ch==="["){
+            stack.push(ch);
+        }else if(map[ch]){
+            if(!stack.length||stack[stack.length-1]!==map[ch]){
+                return false;
+            }
+            stack.pop();
+        }
+    }
+    if(stack.length){
+        return false;
+    }else{
+        return true;
+    }
+        
+    
+
+}
+
