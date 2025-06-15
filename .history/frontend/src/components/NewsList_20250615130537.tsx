@@ -1,5 +1,5 @@
-import React from 'react';
-import { List, Spin, Typography } from 'antd';
+import React,{useEffect,useRef} from 'react';
+import { List, Spin, Typography, Skeleton } from 'antd';
 import NewsCard from './NewsCard';
 import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
 
@@ -112,7 +112,7 @@ const NewsList: React.FC<NewsListProps> = ({
   const hasNews = newsList && newsList.length > 0;
 
   return (
-    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 200 }}>
+    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 500 }}>
       {loading && newsList.length === 0 && (
         <div className={styles['skeleton-container']}>
           {[1, 2, 3].map((item) => (

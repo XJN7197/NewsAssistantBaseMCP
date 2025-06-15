@@ -112,7 +112,7 @@ const NewsList: React.FC<NewsListProps> = ({
   const hasNews = newsList && newsList.length > 0;
 
   return (
-    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 500 }}>
+    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 200 }}>
       {loading && newsList.length === 0 && (
         <div className={styles['skeleton-container']}>
           {[1, 2, 3].map((item) => (
