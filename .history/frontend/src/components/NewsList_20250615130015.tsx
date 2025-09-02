@@ -1,8 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { List,  Skeleton } from 'antd';
+import React,{useEffect,useRef} from 'react';
+import { List, Spin, Typography, Skeleton } from 'antd';
 import NewsCard from './NewsCard';
-import styles from '../pages/Home.module.css';
-
+import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
 
 
 interface NewsListProps {
@@ -90,7 +89,7 @@ const DynamicBackground: React.FC = () => {
     <canvas
       ref={canvasRef}
       width={400}
-      height={200}
+      height={400}
       style={{
         position: 'absolute',
         top: 0,

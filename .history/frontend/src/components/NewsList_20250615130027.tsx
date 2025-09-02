@@ -1,18 +1,11 @@
 import React,{useEffect,useRef} from 'react';
 import { List, Spin, Typography, Skeleton } from 'antd';
-
 import NewsCard from './NewsCard';
 import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
 
 
-interface NewsItem {
-  id: number;
-  error?: string;
-  // 根据实际新闻数据结构添加其他属性
-}
-
 interface NewsListProps {
-  newsList: NewsItem[];
+  newsList: any[]; // 根据实际新闻数据结构定义更精确的类型
   selectedNews: Set<number>;
   onItemChange: (id: number, checked: boolean) => void;
   loading: boolean;
@@ -119,7 +112,7 @@ const NewsList: React.FC<NewsListProps> = ({
   const hasNews = newsList && newsList.length > 0;
 
   return (
-    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 500 }}>
+    <div className={styles['news-list-container']} style={{ position: 'relative', minHeight: 200 }}>
       {loading && newsList.length === 0 && (
         <div className={styles['skeleton-container']}>
           {[1, 2, 3].map((item) => (
