@@ -12,3 +12,7 @@ wheels/
 # Environment variables
 .env
 frontend/.env
+
+# AI code
+.joycode/
+.idea/

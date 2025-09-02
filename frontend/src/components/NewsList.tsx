@@ -1,11 +1,17 @@
-import React from 'react';
-import { List, Spin, Typography } from 'antd';
+import { List, Skeleton } from 'antd';
+import { useRef, useEffect } from 'react';
 import NewsCard from './NewsCard';
 import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
 
 
+interface NewsItem {
+  id: number;
+  error?: string;
+  // 根据实际新闻数据结构添加其他属性
+}
+
 interface NewsListProps {
-  newsList: any[]; // 根据实际新闻数据结构定义更精确的类型
+  newsList: NewsItem[];
   selectedNews: Set<number>;
   onItemChange: (id: number, checked: boolean) => void;
   loading: boolean;
