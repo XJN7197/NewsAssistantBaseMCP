@@ -1,5 +1,5 @@
 import React,{useEffect,useRef} from 'react';
-import { List, Spin, Typography, Skeleton } from 'antd';
+import { List, Skeleton } from 'antd';
 
 import NewsCard from './NewsCard';
 import styles from '../pages/Home.module.css'; // 引入 Home.module.css 中的样式
